@@ -109,6 +109,62 @@ function parametric_genopt_test()
     return model
 end
 
+# A constraint that mixes a base term with `lazy_sum(... if ...)` filtered generators,
+# written *without* `container` so it becomes a per-row `ScalarNonlinearFunction` holding
+# `FilteredSumGenerator`s. This exercises the constraint-augmentation (`add_con!`) path in
+# the GenOpt extension. The problem is a tiny "power-balance"-like QP with a known optimum.
+#
+#   min  sum(y[j]^2)      s.t.   demand[i] == sum(y[j] for j if grp[j] == i)
+#
+# grp = [1, 1, 2], demand = [3, 5]  =>  y1 + y2 == 3, y3 == 5.
+# Optimum: y1 = y2 = 1.5, y3 = 5, objective = 1.5^2 + 1.5^2 + 5^2 = 29.5.
+function filtered_generator_test()
+    grp = [1, 1, 2]
+    demand = [3.0, 5.0]
+    model = Model()
+    @variable(model, 0 <= y[1:3] <= 10)
+    @objective(model, Min, sum(y[j]^2 for j in 1:3))
+    @constraint(
+        model,
+        [i in 1:2],
+        demand[i] == lazy_sum(y[j] for j in 1:3 if grp[j] == i),
+    )
+    return model
+end
+
+# Same problem written with explicit affine constraints (no generators): the reference.
+function filtered_generator_reference()
+    demand = [3.0, 5.0]
+    model = Model()
+    @variable(model, 0 <= y[1:3] <= 10)
+    @objective(model, Min, sum(y[j]^2 for j in 1:3))
+    @constraint(model, y[1] + y[2] == demand[1])
+    @constraint(model, y[3] == demand[2])
+    return model
+end
+
+# Same problem as `filtered_generator_test`, but the constraint uses `container`, so the
+# `FilteredSumGenerator` is nested inside a `FunctionGenerator` and must be handled via
+# `add_con!` — the direct analogue of `@add_con!(c9, a.bus => p[a.i] for a in data.arc)`.
+# `w[i]` is fixed to `sqrt(demand[i])` so `w[i]^2 == demand[i]` (a quadratic base term, as
+# in the OPF power balance).
+function filtered_generator_container_test()
+    grp = [1, 1, 2]
+    demand = [3.0, 5.0]
+    cont = GenOpt.ParametrizedArray
+    model = Model()
+    @variable(model, 0 <= y[1:3] <= 10)
+    @variable(model, w[i in 1:2] == sqrt(demand[i]))
+    @objective(model, Min, sum(y[j]^2 for j in 1:3))
+    @constraint(
+        model,
+        [i in 1:2],
+        w[i]^2 == lazy_sum(y[j] for j in 1:3 if grp[j] == i),
+        container = cont,
+    )
+    return model
+end
+
 function runtests()
     return @testset "GenOpt extension test" begin
         @testset "Quadrotor with ExaModels.Optimizer" begin
@@ -149,6 +205,31 @@ function runtests()
 
             # Same problem as quadrotor, should give same objective
             @test isapprox(objective_value(model), 8.1797, atol = 1.0e-3)
+        end
+
+        @testset "FilteredSumGenerator constraint via add_con!" begin
+            model = filtered_generator_test()
+            set_optimizer(model, () -> ExaModels.Optimizer(MadNLP.madnlp))
+            set_optimizer_attribute(model, "print_level", MadNLP.ERROR)
+            optimize!(model)
+            @test isapprox(objective_value(model), 29.5, atol = 1.0e-4)
+            @test isapprox(value.(model[:y]), [1.5, 1.5, 5.0], atol = 1.0e-4)
+
+            # Matches the explicit (generator-free) reference formulation.
+            ref = filtered_generator_reference()
+            set_optimizer(ref, () -> ExaModels.Optimizer(MadNLP.madnlp))
+            set_optimizer_attribute(ref, "print_level", MadNLP.ERROR)
+            optimize!(ref)
+            @test isapprox(objective_value(model), objective_value(ref), atol = 1.0e-6)
+        end
+
+        @testset "FilteredSumGenerator inside FunctionGenerator (container)" begin
+            model = filtered_generator_container_test()
+            set_optimizer(model, () -> ExaModels.Optimizer(MadNLP.madnlp))
+            set_optimizer_attribute(model, "print_level", MadNLP.ERROR)
+            optimize!(model)
+            @test isapprox(objective_value(model), 29.5, atol = 1.0e-4)
+            @test isapprox(value.(model[:y]), [1.5, 1.5, 5.0], atol = 1.0e-4)
         end
     end
 end

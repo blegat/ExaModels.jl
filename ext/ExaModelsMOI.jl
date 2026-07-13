@@ -207,16 +207,24 @@ function copy_constraints!(c, moim, var_to_idx, T)
     ucon = zeros(T, 0)
     y0 = zeros(T, 0)
     con_to_idx = Dict{MOI.ConstraintIndex,Int}()
+    # Extension-type additive terms found inside constraints (e.g. GenOpt generators).
+    # Each entry is `(local_row, pos, term)`; applied via `add_con!` after `cons` exists.
+    deferred = Tuple{Int,Bool,Any}[]
 
     con_types = MOI.get(moim, MOI.ListOfConstraintTypesPresent())
     for (F, S) in con_types
         F <: MOI.VariableIndex && continue
         ExaModels.is_extension_type(F) && continue
         cis = MOI.get(moim, MOI.ListOfConstraintIndices{F,S}())
-        bin, offset = exafy_con(moim, cis, bin, offset, lcon, ucon, y0, var_to_idx, con_to_idx)
+        bin, offset = exafy_con(moim, cis, bin, offset, lcon, ucon, y0, var_to_idx, con_to_idx, deferred)
     end
     c, cons = ExaModels.add_con(c, offset; start = y0, lcon = lcon, ucon = ucon)
     c = build_constraint!(c, cons, bin)
+
+    # Hook for extensions to augment `cons` with deferred generator terms via add_con!.
+    if !isempty(deferred)
+        c = ExaModels.copy_extension_con_augmentations!(c, cons, deferred, var_to_idx)
+    end
 
     # Hook for extensions (e.g. GenOpt) to add their constraint types
     if applicable(ExaModels.copy_extra_constraints!, c, moim, var_to_idx, con_to_idx, T)
@@ -231,7 +239,8 @@ function _exafy_con(
     c::C,
     bin,
     var_to_idx,
-    con_to_idx;
+    con_to_idx,
+    deferred = nothing;
     pos = true,
 ) where {C<:MOI.ScalarAffineFunction}
     for mm in c.terms
@@ -251,7 +260,8 @@ function _exafy_con(
     c::C,
     bin,
     var_to_idx,
-    con_to_idx;
+    con_to_idx,
+    deferred = nothing;
     pos = true,
 ) where {C<:MOI.ScalarQuadraticFunction}
     for mm in c.affine_terms
@@ -280,28 +290,87 @@ function _exafy_con(
     c::C,
     bin,
     var_to_idx,
-    con_to_idx;
+    con_to_idx,
+    deferred = nothing;
     pos = true,
 ) where {C<:MOI.ScalarNonlinearFunction}
-    if c.head == :+
-        for mm in c.args
-            bin = _exafy_con(i, mm, bin, var_to_idx, con_to_idx)
+    # Only decompose additively (and split off extension-type terms) when this expression
+    # actually contains an extension term (e.g. a GenOpt generator). Generator-free
+    # constraints keep the original handling (a `+` is unrolled, everything else becomes a
+    # single term) so their sparsity structure is unchanged.
+    if !_has_extension_term(c)
+        if c.head == :+
+            for mm in c.args
+                bin = _exafy_con(i, mm, bin, var_to_idx, con_to_idx, deferred; pos = pos)
+            end
+        else
+            e, p = _exafy(c, var_to_idx)
+            e = pos ? e : -e
+            bin = update_bin!(
+                bin,
+                ExaModels.DataIndexed(ExaModels.DataSource(), length(p) + 1) => e,
+                (p..., con_to_idx[i]),
+            ) # augment data with constraint index
         end
-        # elseif c.head == :-
-        #     bin, offset = _exafy_con(i, c.args[1], bin, offset)
-        #     bin, offset = _exafy_con(i, c.args[2], bin, offset; pos = false)
+    elseif c.head == :+
+        for mm in c.args
+            bin = _exafy_con_arg(i, mm, bin, var_to_idx, con_to_idx, deferred; pos = pos)
+        end
+    elseif c.head == :-
+        bin = _exafy_con_arg(i, c.args[1], bin, var_to_idx, con_to_idx, deferred; pos = pos)
+        for k in 2:length(c.args)
+            bin = _exafy_con_arg(i, c.args[k], bin, var_to_idx, con_to_idx, deferred; pos = !pos)
+        end
     else
-        e, p = _exafy(c, var_to_idx)
-        e = pos ? e : -e
-        bin = update_bin!(
-            bin,
-            ExaModels.DataIndexed(ExaModels.DataSource(), length(p) + 1) => e,
-            (p..., con_to_idx[i]),
-        ) # augment data with constraint index
+        # A generator nested inside a non-additive operator is not supported (keep it simple).
+        error(
+            "ExaModels: extension-type term (e.g. a generator) is only supported as an " *
+            "additive (`+`/`-`) term of a constraint, not under `$(c.head)`.",
+        )
     end
     return bin
 end
-function _exafy_con(i, c::C, bin, var_to_idx, con_to_idx; pos = true) where {C<:Real}
+
+# Whether `x` contains an extension-type term (searched through additive `+`/`-` nesting
+# of `ScalarNonlinearFunction`s). Used to decide whether generator-aware decomposition is
+# needed for a constraint.
+_has_extension_term(x) = ExaModels.is_extension_type(typeof(x))
+function _has_extension_term(c::MOI.ScalarNonlinearFunction)
+    ExaModels.is_extension_type(typeof(c)) && return true
+    return any(_has_extension_term, c.args)
+end
+
+# Dispatch an additive term of a ScalarNonlinearFunction constraint. Extension-type
+# terms (e.g. GenOpt `SumGenerator`/`FilteredSumGenerator`) are deferred so they can be
+# applied via `add_con!` once the base constraint block exists; everything else is
+# handled inline by the appropriate `_exafy_con` method.
+function _exafy_con_arg(i, mm, bin, var_to_idx, con_to_idx, deferred; pos = true)
+    if deferred !== nothing && ExaModels.is_extension_type(typeof(mm))
+        push!(deferred, (con_to_idx[i], pos, mm))
+        return bin
+    end
+    return _exafy_con(i, mm, bin, var_to_idx, con_to_idx, deferred; pos = pos)
+end
+
+function _exafy_con(
+    i,
+    c::C,
+    bin,
+    var_to_idx,
+    con_to_idx,
+    deferred = nothing;
+    pos = true,
+) where {C<:MOI.VariableIndex}
+    e, p = _exafy(c, var_to_idx)
+    e = pos ? e : -e
+    bin = update_bin!(
+        bin,
+        ExaModels.DataIndexed(ExaModels.DataSource(), length(p) + 1) => e,
+        (p..., con_to_idx[i]),
+    ) # augment data with constraint index
+    return bin
+end
+function _exafy_con(i, c::C, bin, var_to_idx, con_to_idx, deferred = nothing; pos = true) where {C<:Real}
     e =
         pos ? ExaModels.DataIndexed(ExaModels.DataSource(), 1) :
         -ExaModels.DataIndexed(ExaModels.DataSource(), 1)
@@ -324,6 +393,7 @@ function exafy_con(
     y0,
     var_to_idx,
     con_to_idx,
+    deferred = nothing,
 ) where {V<:Vector{<:MOI.ConstraintIndex}}
     l = sum(cons) do ci
         MOI.dimension(MOI.get(moim, MOI.ConstraintSet(), ci))
@@ -345,7 +415,7 @@ function exafy_con(
         end
         _exafy_con_update_start(ci, start, y0, con_to_idx)
         _exafy_con_update_vector(ci, set, lcon, ucon, con_to_idx)
-        bin = _exafy_con(ci, func, bin, var_to_idx, con_to_idx)
+        bin = _exafy_con(ci, func, bin, var_to_idx, con_to_idx, deferred)
         offset += MOI.dimension(set)
     end
     return bin, offset

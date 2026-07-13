@@ -168,6 +168,8 @@ function ac_power_model(filename; backend = nothing, T = Float64)
         lcon = data.angmin,
         ucon = data.angmax,
     )
+
+    # |S|^2 <= rate_a
     @add_con(
         w,
         c7,
@@ -205,8 +207,9 @@ Downloads.download(
     case,
 )
 
-# Then, we can model/sovle the problem.
-using PowerModels, ExaModels, NLPModelsIpopt
+# Then, we can model/solve the problem.
+using PowerModels, ExaModels#, NLPModelsIpopt
 
 m = ac_power_model(case)
-ipopt(m)
+madnlp(m)
+#ipopt(m)
