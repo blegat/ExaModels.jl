@@ -1,0 +1,60 @@
+case5.m (5 buses)
+  ACPPowerModel      nvar=48     ncon=59     con kernels=6   obj kernels=2   cold=  3.24s warm=  0.00s
+                     |I| = [59, 51, 31, 28, 14, 14]
+  ACRPowerModel      nvar=48     ncon=70     con kernels=5   obj kernels=2   cold=  1.53s warm=  0.00s
+                     |I| = [160, 94, 70, 70, 67]
+  ACTPowerModel      nvar=60     ncon=71     con kernels=6   obj kernels=2   cold=  0.83s warm=  0.00s
+                     |I| = [163, 71, 65, 40, 6, 6]
+  DCPPowerModel      nvar=17     ncon=19     con kernels=3   obj kernels=2   cold=  0.11s warm=  0.00s
+                     |I| = [53, 19, 19]
+  SOCWRPowerModel    nvar=55     ncon=82     con kernels=5   obj kernels=2   cold=  0.18s warm=  0.00s
+                     |I| = [210, 82, 82, 40, 6]
+  QCRMPowerModel     nvar=95     ncon=201    con kernels=5   obj kernels=2   cold=  0.71s warm=  0.00s
+                     |I| = [527, 201, 201, 51, 6]
+  LPACCPowerModel    nvar=54     ncon=65     con kernels=5   obj kernels=2   cold=  0.01s warm=  0.00s
+                     |I| = [225, 65, 65, 40, 6]
+case14.m (14 buses)
+  ACPPowerModel      nvar=118    ncon=169    con kernels=7   obj kernels=3   cold=  1.28s warm=  0.00s
+                     |I| = [169, 131, 89, 81, 40, 30, 10]
+  ACRPowerModel      nvar=118    ncon=203    con kernels=5   obj kernels=3   cold=  0.22s warm=  0.00s
+                     |I| = [440, 250, 203, 203, 171]
+  ACTPowerModel      nvar=158    ncon=209    con kernels=6   obj kernels=3   cold=  0.07s warm=  0.00s
+                     |I| = [422, 209, 189, 120, 20, 20]
+  DCPPowerModel      nvar=39     ncon=55     con kernels=3   obj kernels=3   cold=  0.07s warm=  0.00s
+                     |I| = [146, 55, 55]
+  SOCWRPowerModel    nvar=144    ncon=248    con kernels=5   obj kernels=3   cold=  0.07s warm=  0.00s
+                     |I| = [581, 248, 248, 120, 20]
+  QCRMPowerModel     nvar=272    ncon=637    con kernels=5   obj kernels=3   cold=  0.00s warm=  0.00s
+                     |I| = [1610, 637, 637, 154, 20]
+  LPACCPowerModel    nvar=138    ncon=189    con kernels=5   obj kernels=3   cold=  0.00s warm=  0.00s
+                     |I| = [582, 189, 189, 120, 20]
+case24.m (24 buses)
+  ACPPowerModel      nvar=266    ncon=311    con kernels=6   obj kernels=3   cold=  0.14s warm=  0.00s
+                     |I| = [311, 287, 159, 153, 76, 76]
+  ACRPowerModel      nvar=266    ncon=369    con kernels=5   obj kernels=3   cold=  0.00s warm=  0.00s
+                     |I| = [880, 506, 371, 369, 369]
+  ACTPowerModel      nvar=334    ncon=379    con kernels=6   obj kernels=3   cold=  0.00s warm=  0.00s
+                     |I| = [896, 379, 345, 220, 34, 34]
+  DCPPowerModel      nvar=95     ncon=97     con kernels=3   obj kernels=3   cold=  0.00s warm=  0.00s
+                     |I| = [292, 97, 97]
+  SOCWRPowerModel    nvar=310    ncon=446    con kernels=5   obj kernels=3   cold=  0.00s warm=  0.00s
+                     |I| = [1167, 446, 446, 220, 34]
+  QCRMPowerModel     nvar=528    ncon=1107   con kernels=5   obj kernels=3   cold=  0.00s warm=  0.00s
+                     |I| = [2935, 1107, 1107, 278, 34]
+  LPACCPowerModel    nvar=300    ncon=345    con kernels=5   obj kernels=3   cold=  0.00s warm=  0.00s
+                     |I| = [1234, 345, 345, 220, 34]
+case30.m (30 buses)
+  ACPPowerModel      nvar=236    ncon=348    con kernels=7   obj kernels=2   cold=  0.07s warm=  0.01s
+                     |I| = [348, 259, 184, 166, 82, 68, 14]
+  ACRPowerModel      nvar=236    ncon=419    con kernels=5   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [928, 528, 419, 419, 341]
+  ACTPowerModel      nvar=318    ncon=430    con kernels=6   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [875, 430, 389, 246, 41, 41]
+  DCPPowerModel      nvar=77     ncon=113    con kernels=3   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [294, 113, 113]
+  SOCWRPowerModel    nvar=288    ncon=511    con kernels=5   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [1202, 511, 511, 246, 41]
+  QCRMPowerModel     nvar=553    ncon=1310   con kernels=5   obj kernels=2   cold=  0.00s warm=  0.02s
+                     |I| = [3314, 1310, 1310, 317, 41]
+  LPACCPowerModel    nvar=277    ncon=389    con kernels=5   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [1216, 389, 389, 246, 41]
