@@ -165,6 +165,20 @@ function filtered_generator_container_test()
     return model
 end
 
+# Interval constraint `lb[i] <= f(i) <= ub[i]` under `container`, with per-element bounds (as
+# in the OPF branch angle-difference constraint). Exercises the `VectorInterval` set path.
+# min sum(x[i]^2) s.t. lb[i] <= x[i] <= ub[i]  =>  x hits the lower bounds `lb`.
+function interval_container_test()
+    lb = [0.5, 1.0]
+    ub = [2.0, 3.0]
+    cont = GenOpt.ParametrizedArray
+    model = Model()
+    @variable(model, x[1:2])
+    @objective(model, Min, sum(x[i]^2 for i in 1:2))
+    @constraint(model, [i in 1:2], lb[i] <= x[i] <= ub[i], container = cont)
+    return model
+end
+
 function runtests()
     return @testset "GenOpt extension test" begin
         @testset "Quadrotor with ExaModels.Optimizer" begin
@@ -215,6 +229,14 @@ function runtests()
             @test isapprox(objective_value(model), 29.5, atol = 1.0e-4)
             @test isapprox(value.(model[:y]), [1.5, 1.5, 5.0], atol = 1.0e-4)
 
+            # The generator terms of both rows share one expression pattern, so they are
+            # merged into a single augmentation with the row as data (`|I| = 3`: y[1], y[2]
+            # into row 1 and y[3] into row 2) — not one `add_con!` per scalar constraint —
+            # plus one `|I| = 2` augmentation for the `demand` constants.
+            m = _get_exa_model(model)
+            augs = [c for c in m.cons if c isa ExaModels.ConstraintAugmentation]
+            @test sort([length(a.itr) for a in augs]) == [2, 3]
+
             # Matches the explicit (generator-free) reference formulation.
             ref = filtered_generator_reference()
             set_optimizer(ref, () -> ExaModels.Optimizer(MadNLP.madnlp))
@@ -230,6 +252,15 @@ function runtests()
             optimize!(model)
             @test isapprox(objective_value(model), 29.5, atol = 1.0e-4)
             @test isapprox(value.(model[:y]), [1.5, 1.5, 5.0], atol = 1.0e-4)
+        end
+
+        @testset "Interval constraint under container (VectorInterval)" begin
+            model = interval_container_test()
+            set_optimizer(model, () -> ExaModels.Optimizer(MadNLP.madnlp))
+            set_optimizer_attribute(model, "print_level", MadNLP.ERROR)
+            optimize!(model)
+            @test isapprox(objective_value(model), 1.25, atol = 1.0e-4)
+            @test isapprox(value.(model[:x]), [0.5, 1.0], atol = 1.0e-4)
         end
     end
 end

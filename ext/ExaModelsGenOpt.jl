@@ -10,7 +10,8 @@ import GenOpt:
     IteratorValues,
     ContiguousArrayOfVariables,
     IteratorIndex,
-    Iterator
+    Iterator,
+    VectorInterval
 import MathOptInterface as MOI
 
 # Mark GenOpt function types as extension types
@@ -25,36 +26,44 @@ end
 
 # Handle `SumGenerator`/`FilteredSumGenerator` terms found inside `ScalarNonlinearFunction`
 # constraints. `copy_constraints!` builds the base constraint block `cons` (all non-generator
-# terms) and hands us the generator terms as `(row, pos, term)` tuples; here we add each one
-# as an `add_con!` augmentation of `cons`, exactly like the `@add_con!` augmentation used in
+# terms) and hands us the generator terms as `(row, pos, term)` tuples; here we apply them
+# as `add_con!` augmentations of `cons`, exactly like the `@add_con!` augmentation used in
 # the ExaModels OPF tutorial. `row` is the (local, 1-based) constraint row within `cons`,
 # `pos` the sign.
+#
+# The scalar constraints of one `@constraint(model, [i in ...], ...)` block arrive as one
+# deferred entry per row, all sharing the same expression pattern (e.g. the power balance
+# `lazy_sum` over incident arcs, filtered to a different `i` per row). To recover the same
+# structure as the `container = ParametrizedArray` path, we group entries by pattern —
+# appending the target row to each parameter tuple, so `row` is data rather than a constant
+# baked into the tree — and emit a single `add_con!` per pattern.
 function ExaModels.copy_extension_con_augmentations!(c, cons, deferred, var_to_idx)
-    for (row, pos, term) in deferred
-        c = _augment_constraint!(c, cons, row, pos, term, var_to_idx)
+    heads = Any[]
+    datas = Vector[]
+    for (row, pos, gen) in deferred
+        gen::Union{SumGenerator,FilteredSumGenerator}
+        # Only the simple single-iterator case is supported (as used in the OPF example).
+        @assert length(gen.iterators) == 1 "Only single-iterator generators are supported in constraints"
+        expr, pars = _exagen(gen.func, gen.iterators, var_to_idx)
+        if gen isa FilteredSumGenerator
+            pars = _filter_pars(gen.filter, pars)
+        end
+        isempty(pars) && continue
+        w = length(first(pars))
+        signed = pos ? expr : -expr
+        head = ExaModels.DataIndexed(ExaModels.DataSource(), w + 1) => signed
+        aug = [(par..., row) for par in pars]
+        k = findfirst(i -> heads[i] == head && eltype(aug) <: eltype(datas[i]), eachindex(heads))
+        if isnothing(k)
+            push!(heads, head)
+            push!(datas, aug)
+        else
+            append!(datas[k], aug)
+        end
     end
-    return c
-end
-
-function _augment_constraint!(
-    c,
-    cons,
-    row::Int,
-    pos::Bool,
-    gen::Union{SumGenerator,FilteredSumGenerator},
-    var_to_idx,
-)
-    # Only the simple single-iterator case is supported (as used in the OPF example).
-    @assert length(gen.iterators) == 1 "Only single-iterator generators are supported in constraints"
-    expr, pars = _exagen(gen.func, gen.iterators, var_to_idx)
-    if gen isa FilteredSumGenerator
-        pars = _filter_pars(gen.filter, pars)
+    for (head, data) in zip(heads, datas)
+        c, _ = ExaModels.add_con!(c, cons, Base.Generator(Returns(head), data))
     end
-    isempty(pars) && return c
-    # `row` is a constant within this per-row constraint, so the augmentation adds each
-    # (filtered) term to that single row: `add_con!(c, cons, row => term for term in pars)`.
-    signed = pos ? expr : -expr
-    c, _ = ExaModels.add_con!(c, cons, row => signed for _ in pars)
     return c
 end
 
@@ -218,5 +227,8 @@ _lower_bounds(::Union{MOI.Zeros, MOI.Nonnegatives}, T) = zero(T)
 _lower_bounds(::MOI.Nonpositives, T) = typemin(T)
 _upper_bounds(::Union{MOI.Zeros, MOI.Nonpositives}, T) = zero(T)
 _upper_bounds(::MOI.Nonnegatives, T) = typemax(T)
+# Per-element interval bounds (from `lb[i] <= f(i) <= ub[i]`), passed as vectors to `add_con`.
+_lower_bounds(s::VectorInterval, T) = convert(Vector{T}, s.lower)
+_upper_bounds(s::VectorInterval, T) = convert(Vector{T}, s.upper)
 
 end # module
