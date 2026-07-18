@@ -58,3 +58,39 @@ case30.m (30 buses)
                      |I| = [3314, 1310, 1310, 317, 41]
   LPACCPowerModel    nvar=277    ncon=389    con kernels=5   obj kernels=2   cold=  0.00s warm=  0.00s
                      |I| = [1216, 389, 389, 246, 41]
+
+julia> main("case30000_goc.m")
+[ Info: opening case `pglib_opf_case30000_goc.m`
+case30000_goc.m (30000 buses)
+  ACPPowerModel      nvar=208624 ncon=307592 con kernels=6   obj kernels=3   cold= 11.05s warm=  8.21s
+                     |I| = [307592, 219091, 166020, 142710, 70786, 70786]
+  ACRPowerModel      nvar=208624 ncon=372825 con kernels=5   obj kernels=3   cold=  4.92s warm=  2.62s
+                     |I| = [848152, 486992, 372825, 372825, 290197]
+  ACTPowerModel      nvar=279090 ncon=378058 con kernels=6   obj kernels=3   cold=  2.95s warm=  2.11s
+                     |I| = [786517, 378058, 342825, 212038, 35233, 35233]
+  DCPPowerModel      nvar=68919  ncon=100627 con kernels=3   obj kernels=3   cold=  0.50s warm=  0.68s
+                     |I| = [250958, 100627, 100627]
+  SOCWRPowerModel    nvar=249090 ncon=448523 con kernels=5   obj kernels=3   cold=  2.51s warm=  2.04s
+                     |I| = [1068380, 448523, 448523, 212038, 35233]
+  QCRMPowerModel     nvar=485255 ncon=1142718 con kernels=5   obj kernels=3   cold=  5.16s warm=  5.23s
+                     |I| = [2901569, 1142718, 1142718, 277271, 35233]
+  LPACCPowerModel    nvar=243857 ncon=342825 con kernels=5   obj kernels=3   cold=  2.75s warm=  2.47s
+                     |I| = [1104894, 342825, 342825, 212038, 35233]
+
+julia> main("case78484_epigrids.m")
+[ Info: opening case `pglib_opf_case78484_epigrids.m`
+case78484_epigrids.m (78484 buses)
+  ACPPowerModel      nvar=674562 ncon=1021004 con kernels=7   obj kernels=2   cold= 27.33s warm= 22.53s
+                     |I| = [1021004, 733521, 516944, 504072, 252030, 252022, 8]
+  ACRPowerModel      nvar=674562 ncon=1207439 con kernels=5   obj kernels=2   cold= 11.45s warm= 11.38s
+                     |I| = [2879864, 1669144, 1207439, 1207439, 1021667]
+  ACTPowerModel      nvar=890476 ncon=1236918 con kernels=6   obj kernels=2   cold=  7.57s warm=  7.66s
+                     |I| = [2749749, 1236918, 1128961, 719974, 107957, 107957]
+  DCPPowerModel      nvar=211266 ncon=312451 con kernels=3   obj kernels=2   cold=  1.13s warm=  1.71s
+                     |I| = [852763, 312451, 312451]
+  SOCWRPowerModel    nvar=811998 ncon=1452831 con kernels=5   obj kernels=2   cold=  9.25s warm=  7.20s
+                     |I| = [3613404, 1452831, 1452831, 719974, 107957]
+  QCRMPowerModel     nvar=1508739 ncon=3553014 con kernels=5   obj kernels=2   cold= 19.14s warm= 16.23s
+                     |I| = [9225833, 3553014, 3553014, 906409, 107957]
+  LPACCPowerModel    nvar=782519 ncon=1128961 con kernels=5   obj kernels=2   cold=  8.20s warm=  8.06s
+                     |I| = [3865810, 1128961, 1128961, 719974, 107957]

@@ -12,6 +12,7 @@ using JuMP
 import ExaModels
 import MathOptInterface as MOI
 import PowerModels
+import PGLib
 import Printf
 
 const ExaMOI = Base.get_extension(ExaModels, :ExaModelsMOI)
@@ -25,11 +26,6 @@ const FORMULATIONS = [
     PowerModels.QCRMPowerModel,  # QC relaxation
     PowerModels.LPACCPowerModel, # LP AC cold-start approximation
 ]
-
-function default_cases()
-    dir = joinpath(dirname(dirname(pathof(PowerModels))), "test", "data", "matpower")
-    return [joinpath(dir, "case$(n).m") for n in (5, 14, 24, 30)]
-end
 
 function report(io, data, F)
     pm = PowerModels.instantiate_model(data, F, PowerModels.build_opf)
@@ -56,15 +52,13 @@ function report(io, data, F)
     flush(io)
 end
 
-function main(files = default_cases(); io = stdout)
+function main(name)
     PowerModels.silence()
-    for file in files
-        data = PowerModels.parse_file(file)
-        PowerModels.standardize_cost_terms!(data, order = 2)
-        PowerModels.calc_thermal_limits!(data)
-        println(io, basename(file), " (", length(data["bus"]), " buses)")
-        for F in FORMULATIONS
-            report(io, data, F)
-        end
+    data = PGLib.pglib(name)
+    PowerModels.standardize_cost_terms!(data, order = 2)
+    PowerModels.calc_thermal_limits!(data)
+    println(stdout, name, " (", length(data["bus"]), " buses)")
+    for F in FORMULATIONS
+        report(stdout, data, F)
     end
 end
