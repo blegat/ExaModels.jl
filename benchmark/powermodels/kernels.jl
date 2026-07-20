@@ -4,13 +4,18 @@
 # ext/ExaModelsMOI.jl). A kernel count that grows with the instance size means the
 # grouping failed and compilation time will blow up.
 #
-# Usage:
-#     julia --project=benchmark/powermodels benchmark/powermodels/kernels.jl [case files...]
+# Each formulation is then solved twice with Ipopt limited to a single iteration
+# (so the timings measure the model copy, the AD setup and one evaluation round,
+# not Ipopt's convergence): once with `Ipopt.Optimizer` (JuMP's own AD) and once
+# with `ExaModels.Optimizer(NLPModelsIpopt.ipopt)` (this MOI extension).
 #
-# Without arguments, the matpower cases shipped with PowerModels are used.
+# Usage:
+#     julia --project=benchmark/powermodels benchmark/powermodels/kernels.jl [pglib case name]
 using JuMP
 import ExaModels
+import Ipopt
 import MathOptInterface as MOI
+import NLPModelsIpopt
 import PowerModels
 import PGLib
 import Printf
@@ -48,8 +53,28 @@ function report(io, data, F)
     if !isnothing(core)
         sizes = sort!([length(c.itr) for c in core.cons]; rev = true)
         println(io, " " ^ 21, "|I| = ", sizes)
+        t_jump, o_jump = _timed_solve(data, F, Ipopt.Optimizer)
+        t_exa, o_exa =
+            _timed_solve(data, F, () -> ExaModels.Optimizer(NLPModelsIpopt.ipopt))
+        Printf.@printf(
+            io,
+            "%ssolve (max_iter = 1): Ipopt.Optimizer =%7.2fs (obj %.6e)  ExaModels+ipopt =%7.2fs (obj %.6e)\n",
+            " " ^ 21, t_jump, o_jump, t_exa, o_exa,
+        )
     end
     flush(io)
+end
+
+# Time a full solve — `optimize!` includes the copy to the solver, the AD setup
+# and, with `max_iter = 1`, a single Ipopt iteration.
+function _timed_solve(data, F, optimizer)
+    pm = PowerModels.instantiate_model(data, F, PowerModels.build_opf)
+    model = pm.model
+    JuMP.set_optimizer(model, optimizer)
+    JuMP.set_attribute(model, "max_iter", 1)
+    JuMP.set_attribute(model, "print_level", 0)
+    t = @elapsed JuMP.optimize!(model)
+    return t, JuMP.objective_value(model)
 end
 
 function main(name)
