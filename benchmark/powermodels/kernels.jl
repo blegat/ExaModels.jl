@@ -80,6 +80,10 @@ end
 function main(name)
     PowerModels.silence()
     data = PGLib.pglib(name)
+    # `PGLib.pglib` warns and returns an empty `Dict` when the case is unknown
+    isempty(data) && error(
+        "PGLib case `$name` not found, see `PGLib.find_pglib_case()` for the list of names",
+    )
     PowerModels.standardize_cost_terms!(data, order = 2)
     PowerModels.calc_thermal_limits!(data)
     println(stdout, name, " (", length(data["bus"]), " buses)")

@@ -94,3 +94,84 @@ case78484_epigrids.m (78484 buses)
                      |I| = [9225833, 3553014, 3553014, 906409, 107957]
   LPACCPowerModel    nvar=782519 ncon=1128961 con kernels=5   obj kernels=2   cold=  8.20s warm=  8.06s
                      |I| = [3865810, 1128961, 1128961, 719974, 107957]
+
+
+## 1 iterations
+
+julia> @time main("case30_ieee.m")
+[ Info: opening case `pglib_opf_case30_ieee.m`
+case30_ieee.m (30 buses)
+  ACPPowerModel      nvar=236    ncon=348    con kernels=7   obj kernels=2   cold=  0.01s warm=  0.00s
+                     |I| = [348, 259, 184, 166, 82, 68, 14]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.01s (obj 7.380489e+03)  ExaModels+ipopt =   0.01s (obj 7.380489e+03)
+  ACRPowerModel      nvar=236    ncon=419    con kernels=5   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [928, 528, 419, 419, 341]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.00s (obj 7.372622e+03)  ExaModels+ipopt =   0.00s (obj 7.372622e+03)
+  ACTPowerModel      nvar=318    ncon=430    con kernels=6   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [875, 430, 389, 246, 41, 41]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.00s (obj 7.497915e+03)  ExaModels+ipopt =   0.00s (obj 7.497915e+03)
+  DCPPowerModel      nvar=77     ncon=113    con kernels=3   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [294, 113, 113]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.00s (obj 7.572995e+03)  ExaModels+ipopt =   0.00s (obj 7.572995e+03)
+  SOCWRPowerModel    nvar=288    ncon=511    con kernels=5   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [1202, 511, 511, 246, 41]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.00s (obj 1.969700e+01)  ExaModels+ipopt =   0.00s (obj 1.969700e+01)
+  QCRMPowerModel     nvar=553    ncon=1310   con kernels=5   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [3314, 1310, 1310, 317, 41]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.00s (obj 1.098018e+03)  ExaModels+ipopt =   0.01s (obj 1.098018e+03)
+  LPACCPowerModel    nvar=277    ncon=389    con kernels=5   obj kernels=2   cold=  0.00s warm=  0.00s
+                     |I| = [1216, 389, 389, 246, 41]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.00s (obj 2.183596e+01)  ExaModels+ipopt =   0.00s (obj 2.183596e+01)
+  0.140166 seconds (2.54 M allocations: 111.441 MiB)
+
+julia> @time main("case3022_goc.m")
+[ Info: opening case `pglib_opf_case3022_goc.m`
+case3022_goc.m (3022 buses)
+  ACPPowerModel      nvar=23238  ncon=34722  con kernels=7   obj kernels=3   cold=  0.90s warm=  0.53s
+                     |I| = [34722, 24929, 18182, 17038, 8270, 7842, 428]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.85s (obj 6.397402e+05)  ExaModels+ipopt =   2.65s (obj 6.397402e+05)
+  ACRPowerModel      nvar=23238  ncon=41611  con kernels=5   obj kernels=3   cold=  0.32s warm=  0.22s
+                     |I| = [95392, 55804, 41611, 41611, 33735]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.20s (obj 6.358489e+05)  ExaModels+ipopt =   1.19s (obj 6.358489e+05)
+  ACTPowerModel      nvar=30972  ncon=42456  con kernels=6   obj kernels=3   cold=  0.13s warm=  0.61s
+                     |I| = [90307, 42456, 38589, 24274, 3867, 3867]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.35s (obj 5.815136e+05)  ExaModels+ipopt =   0.99s (obj 5.815136e+05)
+  DCPPowerModel      nvar=7484   ncon=11025  con kernels=3   obj kernels=3   cold=  0.02s warm=  0.02s
+                     |I| = [28737, 11025, 11025]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.04s (obj 6.544072e+05)  ExaModels+ipopt =   0.46s (obj 6.544072e+05)
+  SOCWRPowerModel    nvar=27950  ncon=50189  con kernels=5   obj kernels=3   cold=  0.17s warm=  0.26s
+                     |I| = [121242, 50189, 50189, 24274, 3867]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.78s (obj 5.699900e+05)  ExaModels+ipopt =   0.99s (obj 5.699900e+05)
+  QCRMPowerModel     nvar=53329  ncon=125840 con kernels=5   obj kernels=3   cold=  0.37s warm=  0.35s
+                     |I| = [320887, 125840, 125840, 31163, 3867]
+                     solve (max_iter = 1): Ipopt.Optimizer =   2.92s (obj 5.755891e+05)  ExaModels+ipopt =   2.95s (obj 5.755891e+05)
+  LPACCPowerModel    nvar=27105  ncon=38589  con kernels=5   obj kernels=3   cold=  0.18s warm=  0.12s
+                     |I| = [126404, 38589, 38589, 24274, 3867]
+                     solve (max_iter = 1): Ipopt.Optimizer =   0.19s (obj 5.691111e+05)  ExaModels+ipopt =   0.81s (obj 5.691111e+05)
+ 24.127898 seconds (285.06 M allocations: 11.368 GiB, 20.80% gc time, 10.42% compilation time: <1% of which was recompilation)
+
+julia> @time main("case78484_epigrids.m")
+[ Info: opening case `pglib_opf_case78484_epigrids.m`
+case78484_epigrids.m (78484 buses)
+  ACPPowerModel      nvar=674562 ncon=1021004 con kernels=7   obj kernels=2   cold= 24.84s warm= 22.49s
+                     |I| = [1021004, 733521, 516944, 504072, 252030, 252022, 8]
+                     solve (max_iter = 1): Ipopt.Optimizer =  57.88s (obj 1.170092e+07)  ExaModels+ipopt =  57.65s (obj 1.170092e+07)
+  ACRPowerModel      nvar=674562 ncon=1207439 con kernels=5   obj kernels=2   cold=  9.14s warm= 12.51s
+                     |I| = [2879864, 1669144, 1207439, 1207439, 1021667]
+                     solve (max_iter = 1): Ipopt.Optimizer =  13.57s (obj 1.169214e+07)  ExaModels+ipopt =  26.93s (obj 1.169214e+07)
+  ACTPowerModel      nvar=890476 ncon=1236918 con kernels=6   obj kernels=2   cold=  7.61s warm=  6.85s
+                     |I| = [2749749, 1236918, 1128961, 719974, 107957, 107957]
+                     solve (max_iter = 1): Ipopt.Optimizer =  43.55s (obj 1.168018e+07)  ExaModels+ipopt =  55.12s (obj 1.168018e+07)
+  DCPPowerModel      nvar=211266 ncon=312451 con kernels=3   obj kernels=2   cold=  1.54s warm=  2.35s
+                     |I| = [852763, 312451, 312451]
+                     solve (max_iter = 1): Ipopt.Optimizer =   5.36s (obj 1.170074e+07)  ExaModels+ipopt =   7.82s (obj 1.170074e+07)
+  SOCWRPowerModel    nvar=811998 ncon=1452831 con kernels=5   obj kernels=2   cold=  6.84s warm=  8.43s
+                     |I| = [3613404, 1452831, 1452831, 719974, 107957]
+                     solve (max_iter = 1): Ipopt.Optimizer = 412.42s (obj 1.161147e+07)  ExaModels+ipopt = 418.46s (obj 1.161147e+07)
+  QCRMPowerModel     nvar=1508739 ncon=3553014 con kernels=5   obj kernels=2   cold= 19.27s warm= 20.88s
+                     |I| = [9225833, 3553014, 3553014, 906409, 107957]
+                     solve (max_iter = 1): Ipopt.Optimizer =1936.30s (obj 1.170892e+07)  ExaModels+ipopt =2014.78s (obj 1.170892e+07)
+  LPACCPowerModel    nvar=782519 ncon=1128961 con kernels=5   obj kernels=2   cold=  9.30s warm=  6.34s
+                     |I| = [3865810, 1128961, 1128961, 719974, 107957]
+                     solve (max_iter = 1): Ipopt.Optimizer =  55.10s (obj 1.161137e+07)  ExaModels+ipopt =  64.28s (obj 1.161137e+07)
+5629.384358 seconds (8.34 G allocations: 329.790 GiB, 4.62% gc time)
