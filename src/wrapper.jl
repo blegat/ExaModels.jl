@@ -27,6 +27,13 @@ Returns `nothing` if the type is not handled by any extension.
 function exafy_extension_obj_arg end
 
 """
+    add_extra_constraint!(model, f, s)
+
+Add a constraint whose function type is implemented by an extension.
+"""
+function add_extra_constraint! end
+
+"""
     op(s::Symbol)
 
 Map a Symbol to the corresponding Julia function. Used by both ExaModelsMOI

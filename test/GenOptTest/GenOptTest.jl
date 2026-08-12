@@ -49,9 +49,9 @@ function quadrotor_test()
     return model
 end
 
-function _get_exa_model(model)
+function _get_optimizer(model)
     be = backend(model)
-    return be.optimizer.model.optimizer.model
+    return be.optimizer.model
 end
 
 function parametric_genopt_test()
@@ -128,13 +128,10 @@ function runtests()
             #  - 9 dynamics constraints each with N=3 iterations
             # Plus 1 empty block for standard (non-generator) constraints.
             # If structure were lost, we'd see 36 entries each with 1 iteration.
-            m = _get_exa_model(model)
-            @test m.meta.ncon == 36
-            cons = m.cons
-            # Filter out the empty standard-constraint block
-            nonempty = filter(c -> length(c.itr) > 0, cons)
-            @test length(nonempty) == 10
-            itr_lengths = sort([length(c.itr) for c in nonempty])
+            optimizer = _get_optimizer(model)
+            @test length(optimizer.lcon) == 36
+            @test length(optimizer.cons) == 10
+            itr_lengths = sort([length(c.data) for c in optimizer.cons])
             @test itr_lengths == [3, 3, 3, 3, 3, 3, 3, 3, 3, 9]
         end
 
