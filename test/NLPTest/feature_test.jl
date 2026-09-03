@@ -198,6 +198,49 @@ function test_nonunit_expr(backend)
     end
 end
 
+function test_colon_index(backend)
+    @testset "Colon expands to the tuple of entries along an axis" begin
+        N, K = 4, 3
+        itr = [(i, k, exp10(i / N)) for i in 1:N, k in 1:K]
+        f(x...) = -x[1] * 2 + x[2] * x[3] - x[4] + x[5]
+        g(x, θ) = x[1] * θ[1] - x[5] * θ[2]
+        function build(con)
+            c = ExaCore(; backend, concrete = Val(true))
+            c, z = add_var(c, 1:5, 1:N, 0:K; start = 1.0)
+            c, θ = add_par(c, [2.0, 3.0])
+            c, _ = con(c, z, θ)
+            ExaModel(c)
+        end
+        m = build(
+            (c, z, θ) ->
+                add_con(c, -hi * (f(z[:, i, k]...) + g(z[:, i, k], θ[:])) for (i, k, hi) in itr),
+        )
+        mref = build(
+            (c, z, θ) -> add_con(
+                c,
+                -hi * (
+                    f(z[1, i, k], z[2, i, k], z[3, i, k], z[4, i, k], z[5, i, k]) +
+                    g((z[1, i, k], z[2, i, k], z[3, i, k], z[4, i, k], z[5, i, k]), (θ[1], θ[2]))
+                ) for (i, k, hi) in itr
+            ),
+        )
+        x0 = ExaModels.convert_array([sin(i) for i in 1:m.meta.nvar], backend)
+        @test Array(NLPModels.cons(m, x0)) ≈ Array(NLPModels.cons(mref, x0))
+
+        # column-major order, non-unit starts, `x[:]` as in Base, Expression, wrong rank
+        c = ExaCore(; backend, concrete = Val(true))
+        c, x = add_var(c, 2, 3)
+        c, y = add_var(c, 2:4, 0:1)
+        c, s = add_expr(c, x[i, j]^2 for (i, j) in Iterators.product(1:2, 1:3))
+        @test [v.i for v in x[:, 2]] == [3, 4]
+        @test [v.i for v in x[2, :]] == [2, 4, 6]
+        @test [v.i for v in y[:, 1]] == [10, 11, 12]
+        @test [v.i for v in x[:]] == [v.i for v in x[:, :]] == 1:6
+        @test length(s[:, 1]) == 2
+        @test_throws Exception x[:, 1, 1]
+    end
+end
+
 function test_generator_free_constr(backend)
     @testset "add_con(core, expr, itr)" begin
         c = ExaCore(; backend, concrete = Val(true))
@@ -224,6 +267,9 @@ function test_features(backend)
     end
     @testset "Non-unit expression indexing" begin
         test_nonunit_expr(backend)
+    end
+    @testset "Colon indexing" begin
+        test_colon_index(backend)
     end
     @testset "Generator-free constraint" begin
         test_generator_free_constr(backend)

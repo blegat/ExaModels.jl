@@ -919,7 +919,7 @@ end
 # `Var` wrapping an arithmetic node that would be re-evaluated per row.
 @inline _indexed_var(i::AbstractArgNode, o) = Var(ArgLeaf(i + o))
 @inline _indexed_var(i, o) = Var(i + o)
-@inline function Base.getindex(v::V, is...) where {V<:AbstractVariable}
+@inline function _getindex(v::V, is, ::Val{false}) where {V<:AbstractVariable}
     @assert(length(is) == length(v.size), "Variable index dimension error")
     _bound_check(v.size, is)
     Var(v.offset + idxx(is .- (_start.(v.size) .- 1), _length.(v.size)))
@@ -944,7 +944,7 @@ end
     idx = idxx(is .- (_start.(s.size) .- 1), _length.(s.size))
     return _reindex(s.f, s.iter[idx])
 end
-@inline function Base.getindex(s::Expression, is...)
+@inline function _getindex(s::Expression, is, ::Val{false})
     # Symbolic indices case - the symbolic indices ARE the iterator elements
     # No adjustment needed; the indices are used directly in expression building
     @assert(length(is) == length(s.size), "Expression index dimension error")
@@ -955,10 +955,29 @@ end
     _bound_check(p.size, i)
     ParameterNode(i + (p.offset - _start(p.size[1]) + 1))
 end
-@inline function Base.getindex(p::P, is...) where {P<:Parameter}
+@inline function _getindex(p::P, is, ::Val{false}) where {P<:Parameter}
     @assert(length(is) == length(p.size), "Parameter index dimension error")
     _bound_check(p.size, is)
     ParameterNode(p.offset + idxx(is .- (_start.(p.size) .- 1), _length.(p.size)))
+end
+
+# `x[:, i]` expands each colon axis to its entries, column-major as in Base.
+const _Indexable = Union{AbstractVariable,Expression,Parameter}
+@inline Base.getindex(x::_Indexable, is...) = _getindex(x, is, _hascolon(is))
+@inline Base.getindex(v::V, ::Colon) where {V<:AbstractVariable} = _allentries(v)
+@inline Base.getindex(s::Expression, ::Colon) = _allentries(s)
+@inline Base.getindex(p::P, ::Colon) where {P<:Parameter} = _allentries(p)
+@inline _allentries(x) = _getindex(x, map(_ -> :, x.size), Val(true))
+
+@inline _hascolon(::Tuple{}) = Val(false)
+@inline _hascolon(::Tuple{Colon,Vararg{Any}}) = Val(true)
+@inline _hascolon(is::Tuple) = _hascolon(Base.tail(is))
+
+@inline _axis(n, ::Colon) = _start(n):_start(n)+_length(n)-1
+@inline _axis(n, i) = (i,)
+@inline function _getindex(x, is, ::Val{true})
+    @assert(length(is) == length(x.size), "Colon index dimension error")
+    Tuple(x[I...] for I in Iterators.product(map(_axis, x.size, is)...))
 end
 
 
