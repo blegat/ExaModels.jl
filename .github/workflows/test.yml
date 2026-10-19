@@ -72,17 +72,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-    - name: Per-leg Julia depot
-      # Self-hosted runners keep one persistent depot. The `1` and `lts`
-      # legs share a runner, and their Pkg versions write incompatible
-      # registry archives (General.tar.zst versus General.tar.gz) into the
-      # same registries/, each clobbering the other's General.toml; the
-      # next leg then fails with "Unknown package" at Pkg.add. One depot
-      # per leg keeps the registries apart.
-      shell: bash
-      run: |
-        base="${JULIA_DEPOT_PATH%%:*}"
-        echo "JULIA_DEPOT_PATH=${base:-$HOME/.julia}/v${{ matrix.julia-version || '1' }}" >> "$GITHUB_ENV"
     - name: Setup Julia
       uses: julia-actions/setup-julia@latest
       with:
@@ -144,17 +133,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-    - name: Per-leg Julia depot
-      # Self-hosted runners keep one persistent depot. The `1` and `lts`
-      # legs share a runner, and their Pkg versions write incompatible
-      # registry archives (General.tar.zst versus General.tar.gz) into the
-      # same registries/, each clobbering the other's General.toml; the
-      # next leg then fails with "Unknown package" at Pkg.add. One depot
-      # per leg keeps the registries apart.
-      shell: bash
-      run: |
-        base="${JULIA_DEPOT_PATH%%:*}"
-        echo "JULIA_DEPOT_PATH=${base:-$HOME/.julia}/v${{ matrix.julia-version || '1' }}" >> "$GITHUB_ENV"
     - name: Setup Julia
       uses: julia-actions/setup-julia@latest
       with:
@@ -214,17 +192,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Per-leg Julia depot
-        # Self-hosted runners keep one persistent depot. The `1` and `lts`
-        # legs share a runner, and their Pkg versions write incompatible
-        # registry archives (General.tar.zst versus General.tar.gz) into the
-        # same registries/, each clobbering the other's General.toml; the
-        # next leg then fails with "Unknown package" at Pkg.add. One depot
-        # per leg keeps the registries apart.
-        shell: bash
-        run: |
-          base="${JULIA_DEPOT_PATH%%:*}"
-          echo "JULIA_DEPOT_PATH=${base:-$HOME/.julia}/v${{ matrix.julia-version || '1' }}" >> "$GITHUB_ENV"
       - name: Setup Julia
         uses: julia-actions/setup-julia@latest
         with:
@@ -257,17 +224,6 @@ jobs:
     runs-on: ['self-hosted', 'shin-compute']
     steps:
       - uses: actions/checkout@v4
-      - name: Per-leg Julia depot
-        # Self-hosted runners keep one persistent depot. The `1` and `lts`
-        # legs share a runner, and their Pkg versions write incompatible
-        # registry archives (General.tar.zst versus General.tar.gz) into the
-        # same registries/, each clobbering the other's General.toml; the
-        # next leg then fails with "Unknown package" at Pkg.add. One depot
-        # per leg keeps the registries apart.
-        shell: bash
-        run: |
-          base="${JULIA_DEPOT_PATH%%:*}"
-          echo "JULIA_DEPOT_PATH=${base:-$HOME/.julia}/v${{ matrix.julia-version || '1' }}" >> "$GITHUB_ENV"
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
@@ -296,17 +252,6 @@ jobs:
       CUDA_MPS_PIPE_DIRECTORY: /tmp/no-mps-${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
-      - name: Per-leg Julia depot
-        # Self-hosted runners keep one persistent depot. The `1` and `lts`
-        # legs share a runner, and their Pkg versions write incompatible
-        # registry archives (General.tar.zst versus General.tar.gz) into the
-        # same registries/, each clobbering the other's General.toml; the
-        # next leg then fails with "Unknown package" at Pkg.add. One depot
-        # per leg keeps the registries apart.
-        shell: bash
-        run: |
-          base="${JULIA_DEPOT_PATH%%:*}"
-          echo "JULIA_DEPOT_PATH=${base:-$HOME/.julia}/v${{ matrix.julia-version || '1' }}" >> "$GITHUB_ENV"
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
@@ -332,17 +277,6 @@ jobs:
     runs-on: ['self-hosted', 'gpu', 'amdgpu', 'shin-compute']
     steps:
       - uses: actions/checkout@v4
-      - name: Per-leg Julia depot
-        # Self-hosted runners keep one persistent depot. The `1` and `lts`
-        # legs share a runner, and their Pkg versions write incompatible
-        # registry archives (General.tar.zst versus General.tar.gz) into the
-        # same registries/, each clobbering the other's General.toml; the
-        # next leg then fails with "Unknown package" at Pkg.add. One depot
-        # per leg keeps the registries apart.
-        shell: bash
-        run: |
-          base="${JULIA_DEPOT_PATH%%:*}"
-          echo "JULIA_DEPOT_PATH=${base:-$HOME/.julia}/v${{ matrix.julia-version || '1' }}" >> "$GITHUB_ENV"
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
@@ -372,17 +306,6 @@ jobs:
       IGC_EnableDPEmulation: '1'
     steps:
       - uses: actions/checkout@v4
-      - name: Per-leg Julia depot
-        # Self-hosted runners keep one persistent depot. The `1` and `lts`
-        # legs share a runner, and their Pkg versions write incompatible
-        # registry archives (General.tar.zst versus General.tar.gz) into the
-        # same registries/, each clobbering the other's General.toml; the
-        # next leg then fails with "Unknown package" at Pkg.add. One depot
-        # per leg keeps the registries apart.
-        shell: bash
-        run: |
-          base="${JULIA_DEPOT_PATH%%:*}"
-          echo "JULIA_DEPOT_PATH=${base:-$HOME/.julia}/v${{ matrix.julia-version || '1' }}" >> "$GITHUB_ENV"
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
@@ -458,17 +381,6 @@ jobs:
           repository: madsuite-org/cnlpmodels-py
           ref: master
           path: cnlpmodels-py
-      - name: Per-leg Julia depot
-        # Self-hosted runners keep one persistent depot. The `1` and `lts`
-        # legs share a runner, and their Pkg versions write incompatible
-        # registry archives (General.tar.zst versus General.tar.gz) into the
-        # same registries/, each clobbering the other's General.toml; the
-        # next leg then fails with "Unknown package" at Pkg.add. One depot
-        # per leg keeps the registries apart.
-        shell: bash
-        run: |
-          base="${JULIA_DEPOT_PATH%%:*}"
-          echo "JULIA_DEPOT_PATH=${base:-$HOME/.julia}/v${{ matrix.julia-version || '1' }}" >> "$GITHUB_ENV"
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
