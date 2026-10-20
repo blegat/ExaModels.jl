@@ -78,26 +78,32 @@ jobs:
       with:
         version: ${{ matrix.julia-version }}
     # Each self-hosted runner otherwise keeps its own depot, so every runner
-    # precompiles each new dependency release itself. Jobs on a node share one
-    # depot per Julia minor version instead; the minor versions stay apart
-    # because their Pkg versions write incompatible registry archives.
+    # precompiles each new dependency release itself. The runners' home is on
+    # NFS, so all self-hosted jobs share one depot per Julia minor version; the
+    # minor versions stay apart because their Pkg versions write incompatible
+    # registry archives.
     - name: Shared Julia depot
       shell: bash
       run: |
         v=$(julia --startup-file=no -e 'print(VERSION.major, ".", VERSION.minor)')
-        echo "JULIA_DEPOT_PATH=$HOME/.julia-shared/v$v" >> "$GITHUB_ENV"
+        mkdir -p "$HOME/julia-depots"
+        echo "JULIA_DEPOT_PATH=$HOME/julia-depots/v$v" >> "$GITHUB_ENV"
     # The backend packages are added in the same resolution as the package
     # and its test deps, before develop/instantiate: a later Pkg.add that
     # moves an indirect dependency fails on Julia 1.13.2 with "Unknown
     # package: <dep>" (Pkg.jl #4866), which took every self-hosted leg red.
+    # Installs into the shared depot hold an exclusive lock: Pkg before 1.13
+    # does not lock package installs, and two jobs installing the same package
+    # at once fail. Precompilation is locked by Julia itself, so it runs after.
     - name: Setup tests
       run: |
-        julia --startup-file=no --color=yes --project=./test -e '
+        flock "$JULIA_DEPOT_PATH.lock" env JULIA_PKG_PRECOMPILE_AUTO=0 julia --startup-file=no --color=yes --project=./test -e '
           using Pkg
           Pkg.Registry.update()
           ${{ matrix.backend == 'pocl' && 'Pkg.add(["OpenCL", "pocl_jll"])' || '' }}
           Pkg.develop(path=".")
           Pkg.instantiate()'
+        julia --startup-file=no --color=yes --project=./test -e 'using Pkg; Pkg.precompile()'
     - name: Run tests
       env:
         EXAMODELS_SKIP_AOT: "1"
@@ -152,26 +158,30 @@ jobs:
       with:
         version: ${{ matrix.julia-version }}
     # Each self-hosted runner otherwise keeps its own depot, so every runner
-    # precompiles each new dependency release itself. Jobs on a node share one
-    # depot per Julia minor version instead; the minor versions stay apart
-    # because their Pkg versions write incompatible registry archives.
+    # precompiles each new dependency release itself. The runners' home is on
+    # NFS, so all self-hosted jobs share one depot per Julia minor version; the
+    # minor versions stay apart because their Pkg versions write incompatible
+    # registry archives.
     - name: Shared Julia depot
       shell: bash
       run: |
         v=$(julia --startup-file=no -e 'print(VERSION.major, ".", VERSION.minor)')
-        echo "JULIA_DEPOT_PATH=$HOME/.julia-shared/v$v" >> "$GITHUB_ENV"
+        mkdir -p "$HOME/julia-depots"
+        echo "JULIA_DEPOT_PATH=$HOME/julia-depots/v$v" >> "$GITHUB_ENV"
     # The backend packages are added in the same resolution as the package
     # and its test deps, before develop/instantiate: a later Pkg.add that
     # moves an indirect dependency fails on Julia 1.13.2 with "Unknown
     # package: <dep>" (Pkg.jl #4866), which took every self-hosted leg red.
+    # Installs hold the shared-depot lock, as in the cpu job.
     - name: Setup tests
       run: |
-        julia --startup-file=no --color=yes --project=./test -e '
+        flock "$JULIA_DEPOT_PATH.lock" env JULIA_PKG_PRECOMPILE_AUTO=0 julia --startup-file=no --color=yes --project=./test -e '
           using Pkg
           Pkg.Registry.update()
           Pkg.add("${{ matrix.backend == 'cuda' && 'CUDA' || matrix.backend == 'amdgpu' && 'AMDGPU' || 'oneAPI' }}")
           Pkg.develop(path=".")
           Pkg.instantiate()'
+        julia --startup-file=no --color=yes --project=./test -e 'using Pkg; Pkg.precompile()'
     - name: Run tests
       env:
         EXAMODELS_SKIP_AOT: "1"
