@@ -868,11 +868,14 @@ function test_scalar_oracle_hessian(backend, T)
     tol = T == Float32 ? 1.0e-5 : _atol(backend)
     return @testset "T=$T" begin
         m = _scalar_oracle_fixture(T, backend)
-        # The element type reaches the host-side oracle buffers (before this a
-        # Float32 model could not be built: every cache was Float64).
-        @test m.work_nvar_cpu isa Vector{T}
-        @test m.scalar_oracle_caches[1].cpu_nvar isa Vector{T}
-        @test m.oracle_caches[1].cpu_nvar isa Vector{T}
+        # The model's element type reaches the host-side oracle buffers (before
+        # this a Float32 model could not be built: every cache was Float64).
+        # Compared against the model rather than T because a backend without
+        # Float64 (Metal) builds a Float32 model from a Float64 core.
+        TM = eltype(m.meta.x0)
+        @test m.work_nvar_cpu isa Vector{TM}
+        @test m.scalar_oracle_caches[1].cpu_nvar isa Vector{TM}
+        @test m.oracle_caches[1].cpu_nvar isa Vector{TM}
         H, pattern = _assemble_scalar_fixture_hess(m)
         @test pattern == [(1, 1), (2, 1), (2, 1), (2, 2)]
         # 0.5 * obj hessian [4 2; 2 0] + y1 * con hessian [0 1; 1 0] (lower)
