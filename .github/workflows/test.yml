@@ -68,6 +68,7 @@ jobs:
         julia-version: ['1', 'lts']
         julia-arch: [x64]
         os: [ubuntu-latest]
+        backend: ['ka', 'pocl']
     runs-on: ['self-hosted', 'shin-compute']
     steps:
     - name: Checkout code
@@ -76,6 +77,15 @@ jobs:
       uses: julia-actions/setup-julia@latest
       with:
         version: ${{ matrix.julia-version }}
+    # Each self-hosted runner otherwise keeps its own depot, so every runner
+    # precompiles each new dependency release itself. Jobs on a node share one
+    # depot per Julia minor version instead; the minor versions stay apart
+    # because their Pkg versions write incompatible registry archives.
+    - name: Shared Julia depot
+      shell: bash
+      run: |
+        v=$(julia --startup-file=no -e 'print(VERSION.major, ".", VERSION.minor)')
+        echo "JULIA_DEPOT_PATH=$HOME/.julia-shared/v$v" >> "$GITHUB_ENV"
     # The backend packages are added in the same resolution as the package
     # and its test deps, before develop/instantiate: a later Pkg.add that
     # moves an indirect dependency fails on Julia 1.13.2 with "Unknown
@@ -85,7 +95,7 @@ jobs:
         julia --startup-file=no --color=yes --project=./test -e '
           using Pkg
           Pkg.Registry.update()
-          Pkg.add(["OpenCL", "pocl_jll"])
+          ${{ matrix.backend == 'pocl' && 'Pkg.add(["OpenCL", "pocl_jll"])' || '' }}
           Pkg.develop(path=".")
           Pkg.instantiate()'
     - name: Run tests
@@ -93,15 +103,14 @@ jobs:
         EXAMODELS_SKIP_AOT: "1"
       # EXAMODELS_BACKEND_TESTS_ONLY: the hosted ubuntu legs already run the
       # backend-independent tests on Linux x64 at the same Julia versions.
-      # Coverage only on the julia-version 1 leg: the KernelAbstractions and
+      # Coverage only on the julia-version 1 legs: the KernelAbstractions and
       # OpenCL extension lines are exercised here and nowhere on the hosted
-      # runners, and one instrumented leg is enough for the report.
+      # runners, and one instrumented leg per backend is enough for the report.
       run: |
         julia --startup-file=no --color=yes ${{ matrix.julia-version == '1' && '--code-coverage=user' || '' }} --project=./test -e '
           push!(ARGS, "EXAMODELS_NO_TEST_CPU")
           push!(ARGS, "EXAMODELS_BACKEND_TESTS_ONLY")
-          push!(ARGS, "EXAMODELS_TEST_KA")
-          push!(ARGS, "EXAMODELS_TEST_POCL")
+          push!(ARGS, "EXAMODELS_TEST_" * uppercase("${{ matrix.backend }}"))
           include("test/runtests.jl")'
     - uses: julia-actions/julia-processcoverage@v1
       if: matrix.julia-version == '1'
@@ -142,6 +151,15 @@ jobs:
       uses: julia-actions/setup-julia@latest
       with:
         version: ${{ matrix.julia-version }}
+    # Each self-hosted runner otherwise keeps its own depot, so every runner
+    # precompiles each new dependency release itself. Jobs on a node share one
+    # depot per Julia minor version instead; the minor versions stay apart
+    # because their Pkg versions write incompatible registry archives.
+    - name: Shared Julia depot
+      shell: bash
+      run: |
+        v=$(julia --startup-file=no -e 'print(VERSION.major, ".", VERSION.minor)')
+        echo "JULIA_DEPOT_PATH=$HOME/.julia-shared/v$v" >> "$GITHUB_ENV"
     # The backend packages are added in the same resolution as the package
     # and its test deps, before develop/instantiate: a later Pkg.add that
     # moves an indirect dependency fails on Julia 1.13.2 with "Unknown
