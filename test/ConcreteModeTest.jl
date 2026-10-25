@@ -54,15 +54,6 @@ function runtests()
             y = ones(mf.meta.ncon)
             @test NLPModels.hess_coord(mf, x, y) == NLPModels.hess_coord(mt, x, y)
         end
-
-        @testset "recipe core in default mode" begin
-            c, N = ExaCore(nargs = Val(1))
-            @add_var(c, x, N; start = 1.5)
-            @add_obj(c, (x[i] - 1)^2 for i in 1:N)
-            m = ExaModel(c, 4)
-            @test m.meta.nvar == 4
-            @test NLPModels.obj(m, m.meta.x0) ≈ 1.0
-        end
     end
 end
 

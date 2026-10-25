@@ -151,6 +151,14 @@ import ExaModels: instantiate, ArgSource
             @test NLPModels.jac_coord(m, pt) ≈ NLPModels.jac_coord(ref, pt)
         end
     end
+    @testset "recipe core in default mode" begin
+        c, N = ExaModels.ExaCore(nargs = Val(1))
+        ExaModels.@add_var(c, x, N; start = 1.5)
+        ExaModels.@add_obj(c, (x[i] - 1)^2 for i in 1:N)
+        m = ExaModels.ExaModel(c, 4)
+        @test m.meta.nvar == 4
+        @test NLPModels.obj(m, m.meta.x0) ≈ 1.0
+    end
     @testset "arity is checked against the arity the core declared" begin
         c, N = ExaModels.ExaCore(concrete = Val(true), nargs = Val(1))
         ExaModels.@add_var(c, xb, N; start = 0.0)
