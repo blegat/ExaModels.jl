@@ -3,6 +3,8 @@ module ArgumentTest
 using Test
 import ExaModels
 import NLPModels
+# operators on argument nodes (`arg.N + 1`, `1:arg.N`, ...) are defined by ExaModelsCompiler
+import ExaModelsCompiler
 import ExaModels: instantiate, ArgSource, ArgIndexed, ArgNode1, ArgNode2, _anyarg
 using Test: @inferred
 

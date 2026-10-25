@@ -1,4 +1,5 @@
 [deps]
+ExaModelsCompiler = "3d1e9a26-5b74-4f0c-9a2b-7c8f4e11d3a7"
 ExaModels = "1037b233-b668-4ce9-9b63-f9f681f55dd2"
 ExaPowerIO = "14903efe-9500-4d7f-a589-7ab7e15da6de"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -22,3 +23,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 ExaModels = {path = ".."}
+ExaModelsCompiler = {path = "../ExaModelsCompiler"}
