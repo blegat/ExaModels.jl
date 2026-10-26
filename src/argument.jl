@@ -53,7 +53,7 @@
 #     @add_var(c, x, arg.N; start = arg.v)
 #     @add_con(c, x[i]^2 for i in 1:arg.N; lcon = 0.0, ucon = arg.nh * ones(10))
 #
-# and instantiated later.  Anything with no `ArgSource` in it is passed through
+# (the range `1:arg.N` needs ExaModelsCompiler) and instantiated later.  Anything with no `ArgSource` in it is passed through
 # by `instantiate` untouched, so ordinary (non-symbolic) models are unaffected.
 
 """
@@ -61,8 +61,10 @@
 
 Root type for the symbolic *argument* expression tree.  Nodes are built by
 ordinary Julia operations on an [`ArgSource`](@ref) (`arg.N`, `length(arg.v)`,
-`arg.nh * zeros(10)`, `1:arg.N`, …) and are resolved to concrete
-values by [`instantiate`](@ref).
+`arg.nh * zeros(10)`, …) and are resolved to concrete values by
+[`instantiate`](@ref).  Ranges and type-directed constructors on arguments
+(`1:arg.N`, `zeros(T, arg.N)`, `floor(Int, ·)`, `convert(T, ·)`) are defined by
+ExaModelsCompiler, which needs Julia 1.12.
 """
 abstract type AbstractArgNode end
 

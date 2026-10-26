@@ -779,8 +779,9 @@ end
 # concrete core only, and nothing here has a backedge to an abstractly inferred copy
 # that packages loaded later could invalidate.
 _build_model(c, ::Tuple, ::Tuple, ::Tuple, ::Tuple, prod) = _model_from_core(c, prod)
-_build_model(c, var, par, obj, cons, prod) =
-    Base.invokelatest(_model_from_core, _concretize(c), prod)
+_build_model(c, var, par, obj, cons, prod) = Base.invokelatest(_model_from_dynamic_core, c, prod)
+_model_from_dynamic_core(c, prod) =
+    Base.invokelatest(_model_from_core, Base.invokelatest(_concretize, c), prod)
 
 function _model_from_core(c::ExaCore, prod)
     return ExaModel(
@@ -818,8 +819,16 @@ end
 # Oracle path: always returns ExaModelWithOracle (type-stable for juliac --trim=safe).
 function ExaModel(c::ExaCore; prod = false, kwargs...)
     _recipe_check(c)
-    return _build_with_oracle(_concretize(c); prod, kwargs...)
+    return _build_oracle_model(c, c.var, c.par, c.obj, c.cons; prod, kwargs...)
 end
+
+# As `_build_model`: direct for tuple storage, behind `invokelatest` for `Vector{Any}`.
+_build_oracle_model(c, ::Tuple, ::Tuple, ::Tuple, ::Tuple; kwargs...) =
+    _build_with_oracle(c; kwargs...)
+_build_oracle_model(c, var, par, obj, cons; kwargs...) =
+    Base.invokelatest(_build_dynamic_oracle_model, c; kwargs...)
+_build_dynamic_oracle_model(c; kwargs...) =
+    Base.invokelatest(_build_with_oracle, Base.invokelatest(_concretize, c); kwargs...)
 
 """
     ExaModel(core, argvals; kwargs...)
@@ -850,8 +859,24 @@ julia> m.meta.nvar, m.meta.x0
 # hide leftover placeholders from both.
 function ExaModel(c::ExaCore, a, as...; check = Val(true), kwargs...)
     _arity_check(c.nargs, Val(length(as) + 1))
-    return ExaModel(_assert_instantiated(check, instantiate(_concretize(c), a, as...)); kwargs...)
+    return _instantiated_model(c, c.var, c.par, c.obj, c.cons, check, (a, as...); kwargs...)
 end
+
+# As `_build_model`: direct for tuple storage, behind `invokelatest` for `Vector{Any}`,
+# whose instantiated core is not inferable.
+_instantiated_model(c, ::Tuple, ::Tuple, ::Tuple, ::Tuple, check, args; kwargs...) =
+    ExaModel(_assert_instantiated(check, instantiate(c, args...)); kwargs...)
+_instantiated_model(c, var, par, obj, cons, check, args; kwargs...) =
+    Base.invokelatest(_instantiated_model_dynamic, c, check, args; kwargs...)
+# Each stage is called through `invokelatest` on the concrete value the previous one
+# returned, so no part of this is inferred for an abstract core.
+function _instantiated_model_dynamic(c, check, args; kwargs...)
+    cc = Base.invokelatest(_concretize, c)
+    ic = Base.invokelatest(instantiate, cc, args...)
+    return Base.invokelatest(_instantiated_model_finish, check, ic; kwargs...)
+end
+_instantiated_model_finish(check, ic; kwargs...) =
+    ExaModel(_assert_instantiated(check, ic); kwargs...)
 
 # One value per placeholder, checked against the arity the core recorded. Both
 # `Val`s are known statically, so a correct call compiles to nothing at all.
@@ -1089,7 +1114,8 @@ end
 
 # A symbolic dimension defers to itself: at instantiation the node resolves to
 # an `Int` or a `UnitRange` and the methods above then apply unchanged, so
-# `arg.N` and `1:arg.N` need no separate handling here.
+# `arg.N` and `1:arg.N` (the range needs ExaModelsCompiler) need no separate
+# handling here.
 @inline _length(n::AbstractArgNode) = ArgCall(_length, (n,))
 @inline _start(n::AbstractArgNode) = ArgCall(_start, (n,))
 
