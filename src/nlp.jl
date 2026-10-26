@@ -554,12 +554,18 @@ is known statically and destructuring stays inferable.
 # keeps the `Val(true)` path fully inferable for `juliac --trim=safe`.
 @inline _concretize(c::ExaCore) = _concretize(c, c.var, c.par, c.obj, c.cons)
 @inline _concretize(c::ExaCore, ::Tuple, ::Tuple, ::Tuple, ::Tuple) = c
-@inline _concretize(c::ExaCore, var, par, obj, cons) = ExaCore(
-    c;
-    var = _materialize(var),
-    par = _materialize(par),
-    obj = _materialize(obj),
-    cons = _materialize(cons),
+@inline _concretize(c::ExaCore, var, par, obj, cons) = _with_blocks(
+    c, _materialize(var), _materialize(par), _materialize(obj), _materialize(cons),
+)
+# The core with its block storage replaced, built positionally: the keyword copy
+# `ExaCore(c; var = ...)` cannot be inferred here (its keywords come from splatting the
+# fields), and its keyword body then compiles default-argument code for an abstract
+# backend that packages loaded later can invalidate.
+@inline _with_blocks(c::ExaCore{T}, var, par, obj, cons) where {T} = ExaCore{T}(
+    c.name, c.backend, var, par, obj, cons,
+    c.nvar, c.npar, c.ncon, c.nconaug, c.nobj, c.nnzc, c.nnzg, c.nnzj, c.nnzh,
+    c.x0, c.θ, c.lvar, c.uvar, c.y0, c.lcon, c.ucon,
+    c.minimize, c.tag, c.refs, c.oracles, c.scalar_oracles, c.evals, c.nargs,
 )
 
 @inline _exa_core_from_x0(x0, backend; kwargs...) =
@@ -764,7 +770,19 @@ julia> result = ipopt(m; print_level=0)    # solve the problem
 # No-oracle path: always returns ExaModel (type-stable for juliac --trim=safe).
 function ExaModel(c::ExaCore{T, VT, B, S, V, P, O, C, R, Tuple{}, Tuple{}, Tuple{}}; prod = false, kwargs...) where {T, VT, B, S, V, P, O, C, R}
     _recipe_check(c)
-    c = _concretize(c)
+    return _build_model(c, c.var, c.par, c.obj, c.cons, prod)
+end
+
+# A tuple-storage core is already concrete: build directly, which keeps this path
+# inferable for `juliac --trim=safe`. For `Vector{Any}` storage, `_concretize` is not
+# inferable, so build behind `invokelatest`: `_model_from_core` is then compiled for the
+# concrete core only, and nothing here has a backedge to an abstractly inferred copy
+# that packages loaded later could invalidate.
+_build_model(c, ::Tuple, ::Tuple, ::Tuple, ::Tuple, prod) = _model_from_core(c, prod)
+_build_model(c, var, par, obj, cons, prod) =
+    Base.invokelatest(_model_from_core, _concretize(c), prod)
+
+function _model_from_core(c::ExaCore, prod)
     return ExaModel(
         c.name,
         c.var,

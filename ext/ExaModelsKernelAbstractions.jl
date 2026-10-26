@@ -103,27 +103,9 @@ function ExaModels.build_extension(
         # Per-oracle sorted sparsity + row/col pointers, precomputed once.
         # Used in jprod_nln! / jtprod_nln! / hprod! so we never rebuild them
         # at inference time.  adapt=Val(true) oracles store nothing.
-        _o_jac_off = let s = simd_nnzj
-            v = [
-                begin
-                        r = s; s += o.nnzj; r
-                    end for o in c.oracles
-            ]; v
-        end
-        _o_hess_off = let s = simd_nnzh
-            v = [
-                begin
-                        r = s; s += o.nnzh; r
-                    end for o in c.oracles
-            ]; v
-        end
-        _o_con_off = let s = simd_ncon
-            v = [
-                begin
-                        r = s; s += o.ncon; r
-                    end for o in c.oracles
-            ]; v
-        end
+        _o_jac_off = _oracle_offsets(simd_nnzj, c.oracles, :nnzj)
+        _o_hess_off = _oracle_offsets(simd_nnzh, c.oracles, :nnzh)
+        _o_con_off = _oracle_offsets(simd_ncon, c.oracles, :ncon)
         _SP = Tuple{Tuple{Int, Int}, Int}  # element type shared with SIMD sparsity
         oracle_prod = ntuple(length(c.oracles)) do i
             oracle = c.oracles[i]
@@ -716,6 +698,20 @@ end
 
 ExaModels.getbackend(m::ExaModels.AbstractExaModel{T,VT,E}) where {T,VT,E<:KAExtension} =
     m.ext.backend
+
+# Starting offset of each oracle's block: `start`, then `start` plus the running sum of
+# `getproperty(o, field)`. Built with a loop rather than a comprehension that updates a
+# captured counter, which Julia boxes, so the vector type is inferred and `collect`'s
+# generic path (open to invalidation by any new `merge!` method) is not used.
+function _oracle_offsets(start::Integer, oracles, field::Symbol)
+    v = Int[]
+    s = Int(start)
+    for o in oracles
+        push!(v, s)
+        s += Int(getproperty(o, field))
+    end
+    return v
+end
 
 # ── GPU-specific overrides for ExaModelWithOracle ────────────────────────────
 #
