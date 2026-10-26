@@ -51,6 +51,9 @@ const HOST_ONLY_TESTS = (
 )
 
 function runtests()
+    for name in HOST_ONLY_TESTS
+        isdefined(@__MODULE__, name) || error("HOST_ONLY_TESTS: no test named $name")
+    end
     is_test(name) =
         startswith("$name", "test_") && !(BACKEND_TESTS_ONLY && name in HOST_ONLY_TESTS)
     @testset "$name" for name in filter(is_test, names(@__MODULE__; all = true))
